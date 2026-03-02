@@ -1,0 +1,7 @@
+{
+  "aiVisitSummary": "AI Visit Summary",
+  "backendUrlNotConfigured": "Backend URL must be configured in the application config",
+  "errorGeneratingSummary": "Error generating summary",
+  "generateAgain": "Generate again",
+  "generateAiSummary": "Generate AI summary"
+}
