@@ -5,7 +5,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { showSnackbar, useConfig, Workspace2 } from '@openmrs/esm-framework';
 import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-common-lib';
-import { fetchVisitDataForSummary, serializeVisitDataForLLM } from './ai-visit-summary.resource';
 import { generateVisitSummary, type LlmProvider } from './llm.service';
 import { type AiVisitSummarizerConfig } from './config-schema';
 import styles from './ai-visit-summary.workspace.scss';
@@ -17,7 +16,7 @@ interface AiVisitSummaryWorkspaceProps {
 const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisitSummaryWorkspaceProps, {}>> = ({
   closeWorkspace,
   workspaceProps: { visit },
-  groupProps: { patient, patientUuid },
+  groupProps: { patientUuid },
 }) => {
   const { t } = useTranslation();
   const config = useConfig<{ aiVisitSummarizer?: AiVisitSummarizerConfig }>();
@@ -31,7 +30,7 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
   const effectiveModel = aiConfig.model ?? 'claude-sonnet-4-6';
 
   const [summary, setSummary] = useState<string | null>(null);
-  const [status, setStatus] = useState<'loading' | 'generating' | 'done' | 'error'>('loading');
+  const [status, setStatus] = useState<'generating' | 'done' | 'error'>('generating');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleGenerate = useCallback(async () => {
@@ -45,21 +44,17 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
       return;
     }
 
-    setStatus('loading');
+    setStatus('generating');
     setErrorMessage(null);
     setSummary(null);
 
     try {
-      const raw = await fetchVisitDataForSummary(visit.uuid, patientUuid);
-      const visitData = serializeVisitDataForLLM(raw, patient ?? undefined);
-
-      setStatus('generating');
-
       const result = await generateVisitSummary({
         backendUrl,
         provider,
         model: effectiveModel,
-        visitData,
+        visitUuid: visit.uuid,
+        patientUuid,
       });
 
       setSummary(result);
@@ -74,7 +69,7 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
         subtitle: msg,
       });
     }
-  }, [visit.uuid, patientUuid, patient, backendUrl, provider, effectiveModel, t]);
+  }, [visit.uuid, patientUuid, backendUrl, provider, effectiveModel, t]);
 
   useEffect(() => {
     handleGenerate();
@@ -85,7 +80,7 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
       <div className={styles.container}>
         {status === 'error' && errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
 
-        {(status === 'loading' || status === 'generating') && (
+        {status === 'generating' && (
           <div className={styles.skeletonSection}>
             <SkeletonText paragraph lineCount={12} />
           </div>
@@ -99,7 +94,7 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
             <Button
               kind="secondary"
               onClick={() => {
-                setStatus('loading');
+                setStatus('generating');
                 setSummary(null);
                 setErrorMessage(null);
                 handleGenerate();
