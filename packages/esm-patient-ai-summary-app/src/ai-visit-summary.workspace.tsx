@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, SkeletonText } from '@carbon/react';
 import ReactMarkdown from 'react-markdown';
@@ -25,9 +25,39 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
   };
   const backendUrl = aiConfig.backendUrl?.trim() ?? 'http://localhost:3001';
 
+  const summaryRef = useRef<HTMLDivElement>(null);
+
   const [summary, setSummary] = useState<string | null>(null);
   const [status, setStatus] = useState<'generating' | 'done' | 'error'>('generating');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handlePrint = useCallback(() => {
+    if (!summaryRef.current) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+
+    const titleEl = win.document.createElement('title');
+    titleEl.textContent = t('aiVisitSummary', 'AI Visit Summary');
+    win.document.head.appendChild(titleEl);
+
+    const style = win.document.createElement('style');
+    style.textContent = [
+      'body { font-family: sans-serif; font-size: 14px; line-height: 1.6; margin: 2cm; color: #000; }',
+      'h1 { font-size: 1.4em; margin-top: 1.5em; }',
+      'h2 { font-size: 1.2em; margin-top: 1.2em; }',
+      'table { border-collapse: collapse; width: 100%; margin: 1em 0; }',
+      'th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }',
+      'th { font-weight: 600; background: #f4f4f4; }',
+      'ul, ol { margin-left: 1.5em; }',
+    ].join('\n');
+    win.document.head.appendChild(style);
+
+    win.document.body.appendChild(summaryRef.current.cloneNode(true));
+
+    win.focus();
+    win.print();
+    win.close();
+  }, [t]);
 
   const handleGenerate = useCallback(async () => {
     if (!backendUrl) {
@@ -82,21 +112,25 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
 
         {status === 'done' && summary && (
           <>
-            <div className={styles.summarySection}>
+            <div ref={summaryRef} className={styles.summarySection}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
             </div>
-            <Button
-              kind="secondary"
-              onClick={() => {
-                setStatus('generating');
-                setSummary(null);
-                setErrorMessage(null);
-                handleGenerate();
-              }}
-              className={styles.regenerateButton}
-            >
-              {t('generateAgain', 'Generate again')}
-            </Button>
+            <div className={styles.actions}>
+              <Button kind="ghost" onClick={handlePrint}>
+                {t('printSummary', 'Print')}
+              </Button>
+              <Button
+                kind="secondary"
+                onClick={() => {
+                  setStatus('generating');
+                  setSummary(null);
+                  setErrorMessage(null);
+                  handleGenerate();
+                }}
+              >
+                {t('generateAgain', 'Generate again')}
+              </Button>
+            </div>
           </>
         )}
       </div>
