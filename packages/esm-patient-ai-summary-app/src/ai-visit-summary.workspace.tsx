@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { showSnackbar, useConfig, Workspace2 } from '@openmrs/esm-framework';
 import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-common-lib';
-import { generateVisitSummary, type LlmProvider } from './llm.service';
+import { generateVisitSummary } from './llm.service';
 import { type AiVisitSummarizerConfig } from './config-schema';
 import styles from './ai-visit-summary.workspace.scss';
 
@@ -22,12 +22,8 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
   const config = useConfig<{ aiVisitSummarizer?: AiVisitSummarizerConfig }>();
   const aiConfig: AiVisitSummarizerConfig = config?.aiVisitSummarizer ?? {
     backendUrl: 'http://localhost:3001',
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
   };
   const backendUrl = aiConfig.backendUrl?.trim() ?? 'http://localhost:3001';
-  const provider = (aiConfig.provider as LlmProvider) ?? 'anthropic';
-  const effectiveModel = aiConfig.model ?? 'claude-sonnet-4-6';
 
   const [summary, setSummary] = useState<string | null>(null);
   const [status, setStatus] = useState<'generating' | 'done' | 'error'>('generating');
@@ -51,8 +47,6 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
     try {
       const result = await generateVisitSummary({
         backendUrl,
-        provider,
-        model: effectiveModel,
         visitUuid: visit.uuid,
         patientUuid,
       });
@@ -69,7 +63,7 @@ const AiVisitSummaryWorkspace: React.FC<PatientWorkspace2DefinitionProps<AiVisit
         subtitle: msg,
       });
     }
-  }, [visit.uuid, patientUuid, backendUrl, provider, effectiveModel, t]);
+  }, [visit.uuid, patientUuid, backendUrl, t]);
 
   useEffect(() => {
     handleGenerate();
