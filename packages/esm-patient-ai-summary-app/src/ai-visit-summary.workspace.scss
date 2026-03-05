@@ -87,6 +87,8 @@
   color: var(--cds-text-error);
 }
 
-.regenerateButton {
+.actions {
+  display: flex;
+  gap: layout.$spacing-03;
   margin-top: layout.$spacing-05;
 }
